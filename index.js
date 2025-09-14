@@ -1,23 +1,45 @@
-const { ApolloServer, gql } = require('apollo-server');
+const { ApolloServer, gql } = require("apollo-server");
+const mysql = require("mysql2/promise");
 
-// Step 1: Define GraphQL schema
+// Create MySQL connection pool
+const pool = mysql.createPool({
+  host: "localhost",
+  user: "kafka",      // change if your MySQL user is different
+  password: "password", // replace with your MySQL password
+  database: "graphql_books"
+});
+
+// GraphQL Schema
 const typeDefs = gql`
+  type Book {
+    id: ID!
+    title: String!
+    author: String!
+  }
+
   type Query {
-    hello: String
+    books: [Book!]!
+    book(id: ID!): Book
   }
 `;
 
-// Step 2: Define resolvers
+// Resolvers
 const resolvers = {
   Query: {
-    hello: () => "Hello GraphQL World!"
+    books: async () => {
+      const [rows] = await pool.query("SELECT * FROM books");
+      return rows;
+    },
+    book: async (_, { id }) => {
+      const [rows] = await pool.query("SELECT * FROM books WHERE id = ?", [id]);
+      return rows[0] || null;
+    }
   }
 };
 
-// Step 3: Create Apollo Server
+// Start Apollo Server
 const server = new ApolloServer({ typeDefs, resolvers });
 
-// Step 4: Start server
 server.listen().then(({ url }) => {
   console.log(`🚀 Server ready at ${url}`);
 });
