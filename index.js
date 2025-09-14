@@ -21,6 +21,15 @@ const typeDefs = gql`
     books: [Book!]!
     book(id: ID!): Book
   }
+
+  input BookInput {
+    title: String!
+    author: String!
+  }
+
+  type Mutation {
+    addBook(input: BookInput!): Book!
+  }
 `;
 
 // Resolvers
@@ -34,8 +43,26 @@ const resolvers = {
       const [rows] = await pool.query("SELECT * FROM books WHERE id = ?", [id]);
       return rows[0] || null;
     }
+  },
+
+  Mutation: {
+    addBook: async (_, { input }) => {
+      const { title, author } = input;
+      const [result] = await pool.query(
+        "INSERT INTO books (title, author) VALUES (?, ?)",
+        [title, author]
+      );
+
+      // Return the newly created book
+      return {
+        id: result.insertId,
+        title,
+        author
+      };
+    }
   }
 };
+
 
 // Start Apollo Server
 const server = new ApolloServer({ typeDefs, resolvers });
